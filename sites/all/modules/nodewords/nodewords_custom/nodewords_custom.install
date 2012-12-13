@@ -1,0 +1,18 @@
+<?php
+// $Id: nodewords_custom.install,v 1.1.2.3 2009/10/10 20:24:51 kiam Exp $
+
+/**
+ * @file
+ * Installation file for Nodewords custom.
+ */
+
+/**
+ * Implementation of hook_install().
+ */
+function nodewords_custom_install() {
+  db_query("UPDATE {system} SET weight = 18 WHERE name = 'nodewords_custom' AND type = 'module'");
+}
+
+/**
+ * Next update ID: 6101.
+ */

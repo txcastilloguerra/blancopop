@@ -1,0 +1,45 @@
+div.views-cloud ul {
+  list-style: none;
+  text-align: center;
+}
+
+div.views-cloud ul li, div.views-cloud div {
+  display: inline;
+  background: none;
+  padding: 5px;
+  margin: 10px;
+  white-space: nowrap;
+}
+
+span.views-cloud-count {
+  font-size: small;
+  color: lightgrey;
+}
+
+li.views-cloud-size-1, div.views-cloud-size-1 {
+  font-size: 1em;
+}
+
+li.views-cloud-size-2, div.views-cloud-size-2 {
+  font-size: 1.5em;
+}
+
+li.views-cloud-size-3, div.views-cloud-size-3 {
+  font-size: 2em;
+}
+
+li.views-cloud-size-4, div.views-cloud-size-4 {
+  font-size: 2.5em;
+}
+
+li.views-cloud-size-5, div.views-cloud-size-5 {
+  font-size: 3em;
+}
+
+li.views-cloud-size-6, div.views-cloud-size-6 {
+  font-size: 3.5em;
+}
+
+li.views-cloud-size-7, div.views-cloud-size-7 {
+  font-size: 4em;
+}

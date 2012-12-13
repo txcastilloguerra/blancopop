@@ -1,0 +1,257 @@
+# $Id: week.pot,v 1.1.2.3 2009/09/01 19:08:25 prometheus6 Exp $
+#
+# LANGUAGE translation of Drupal (general)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from files:
+#  week.module,v 1.19.2.1.2.6 2009/09/01 18:52:37 prometheus6
+#  week.info,v 1.2.2.1.2.2 2009/08/31 17:16:19 prometheus6
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2009-09-02 03:05+0800\n"
+"PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
+"Last-Translator: NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: week.module:81;104
+msgid "Weekly archives"
+msgstr ""
+
+#: week.module:89;108
+msgid "Weekly %type archives"
+msgstr ""
+
+#: week.module:135
+msgid "more..."
+msgstr ""
+
+#: week.module:401
+msgid "Global block node types"
+msgstr ""
+
+#: week.module:408
+msgid "Selected node types will be included in the global block and archive pages."
+msgstr ""
+
+#: week.module:417
+msgid "Blocks by node type"
+msgstr ""
+
+#: week.module:424
+msgid "Blocks and archive pages for the selected node types will be created."
+msgstr ""
+
+#: week.module:431
+msgid "Maximum week links in block"
+msgstr ""
+
+#: week.module:435
+msgid "Enter a number to limit the number of months linked in the block, blank or \"0\" to list all months."
+msgstr ""
+
+#: week.module:441
+msgid "Sort links in chronological order"
+msgstr ""
+
+#: week.module:444;462
+msgid "If checked, the list of archive links will be sorted from oldest to newest. Otherwise it will be sorted from newest to oldest"
+msgstr ""
+
+#: week.module:450
+msgid "Show link count"
+msgstr ""
+
+#: week.module:453
+msgid "If checked, the link to each weekly archive page in blocks will show the number of nodes in that week "
+msgstr ""
+
+#: week.module:459
+msgid "Sort archive page in chronological order"
+msgstr ""
+
+#: week.module:468
+msgid "Paginate archive page"
+msgstr ""
+
+#: week.module:471
+msgid "If checked the output will be split into pages. The number of posts will respect the global nodes per page setting."
+msgstr ""
+
+#: week.module:546
+msgid "Global settings"
+msgstr ""
+
+#: week.module:550
+msgid "Link text"
+msgstr ""
+
+#: week.module:552
+msgid "Define how the block link text is constructed."
+msgstr ""
+
+#: week.module:557
+msgid "Archive path"
+msgstr ""
+
+#: week.module:559
+msgid "Enter the path to use as the default archive path. Please use only letters, numbers and underscores (_).<br />The global archive path\r\n      will be \"archive_path/year/week\"."
+msgstr ""
+
+#: week.module:565
+msgid "Archive title"
+msgstr ""
+
+#: week.module:567
+msgid "Enter the base title to use for the archive pages."
+msgstr ""
+
+#: week.module:575;641
+msgid "Replacement patterns"
+msgstr ""
+
+#: week.module:591
+msgid "Node type settings"
+msgstr ""
+
+#: week.module:597
+msgid "Node type archive path"
+msgstr ""
+
+#: week.module:611
+msgid "Titles and paths"
+msgstr ""
+
+#: week.module:623
+msgid " archive title"
+msgstr ""
+
+#: week.module:629
+msgid " archive path"
+msgstr ""
+
+#: week.module:749
+msgid "Machine readable type name"
+msgstr ""
+
+#: week.module:750
+msgid "Displayable type label"
+msgstr ""
+
+#: week.module:752
+msgid "Long month name (January, February...December) of the first day of the week"
+msgstr ""
+
+#: week.module:753
+msgid "Short month name (Jan, Feb...Dec) of the first day of the week"
+msgstr ""
+
+#: week.module:754
+msgid "Two digit month (01, 02...12) of the first day of the week"
+msgstr ""
+
+#: week.module:755
+msgid "Variable digit month (1, 2...12) of the first day of the week"
+msgstr ""
+
+#: week.module:756
+msgid "ISO-8601 week number. Week 1 is the first week with more than three days in it."
+msgstr ""
+
+#: week.module:757
+msgid "Two digit day (01, 02...31) of the first day of the week"
+msgstr ""
+
+#: week.module:758
+msgid "Variable digit day (1, 2...31) of the first day of the week"
+msgstr ""
+
+#: week.module:759
+msgid "Day name (Sunday, Monday...Saturday) of the first day of the week"
+msgstr ""
+
+#: week.module:760
+msgid "Abbrieviated day name (Sun, Mon...Sat) of the first day of the week"
+msgstr ""
+
+#: week.module:761
+msgid "Four digit year of the first day of the week"
+msgstr ""
+
+#: week.module:762
+msgid "Two digit year of the first day of the week"
+msgstr ""
+
+#: week.module:764
+msgid "Long month name (January, February...December) of the last day of the week"
+msgstr ""
+
+#: week.module:765
+msgid "Short month name (Jan, Feb...Dec) of the last day of the week"
+msgstr ""
+
+#: week.module:766
+msgid "Two digit month (01, 02...12) of the last day of the week"
+msgstr ""
+
+#: week.module:767
+msgid "Variable digit month (1, 2...12) of the last day of the week"
+msgstr ""
+
+#: week.module:768
+msgid "Two digit day (01, 02...31) of the last day of the week"
+msgstr ""
+
+#: week.module:769
+msgid "Variable digit day (1, 2...31) of the last day of the week"
+msgstr ""
+
+#: week.module:770
+msgid "Day name (Sunday, Monday...Saturday) of the last day of the week"
+msgstr ""
+
+#: week.module:771
+msgid "Abbrieviated day name (Sun, Mon...Sat) of the last day of the week"
+msgstr ""
+
+#: week.module:772
+msgid "Four digit year of the last day of the week"
+msgstr ""
+
+#: week.module:773
+msgid "Two digit year of the last day of the week"
+msgstr ""
+
+#: week.module:316
+msgid "administer week"
+msgstr ""
+
+#: week.module:272;286
+msgid "Weekly archive settings"
+msgstr ""
+
+#: week.module:287
+msgid "Configure node types for which blocks will be generated."
+msgstr ""
+
+#: week.module:293
+msgid "Links and titles"
+msgstr ""
+
+#: week.module:294
+msgid "Configure path names for node types for which blocks will be generated and date format of the link text."
+msgstr ""
+
+#: week.info:0
+msgid "Week"
+msgstr ""
+
+#: week.info:0
+msgid "Create block containing a list of weekly archives."
+msgstr ""
+

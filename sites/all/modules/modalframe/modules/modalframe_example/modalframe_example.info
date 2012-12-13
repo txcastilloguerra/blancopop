@@ -1,0 +1,13 @@
+; $Id: modalframe_example.info,v 1.1.2.2 2009/05/30 09:29:58 markuspetrux Exp $
+name = Modal Frame Example
+description = Example for the Modal Frame API.
+package = User interface
+dependencies[] = modalframe
+core = 6.x
+
+; Information added by drupal.org packaging script on 2009-07-08
+version = "6.x-1.3"
+core = "6.x"
+project = "modalframe"
+datestamp = "1247092847"
+

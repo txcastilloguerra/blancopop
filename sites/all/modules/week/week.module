@@ -1,0 +1,875 @@
+<?php
+/* $Id: week.module,v 1.19.2.1.2.7 2009/09/01 19:08:25 prometheus6 Exp $ */
+define('ARCHIVEROOTBEFORETYPE', 1);
+define('TYPEBEFOREARCHIVEROOT', 2);
+
+/**
+ * Calculate beginning and end dates for a given year and week 
+ * @param $date_data must have at least $date_data['year'] and $date_data['week'] populated
+ */
+function _week_week_data(&$date_data) {
+  //  This is a mess because there's no function that gives you the first day of the week for a given year and week combination.
+  
+
+  //  Drupal allows you to set any day as the first day of the week. However, the ISO8601 standard specifies Monday as the first day of the week
+  //  and the USofA standard specifies Sunday. So we are going to make Sunday the first day of the week if specified; otherwise it will be Monday. 
+  $date_first_day = (variable_get('date_first_day', 1) == 0) ? 0 : 1;
+  
+  // First we need to create a date variable holding SOME day in the given week (the first day of the year, plus a number of weeks).
+  // the $date_first_day adjustment reflects the practical observation that starting the week with Monday gets you a lower week number
+  // for a given date.  
+  $wk_ts = strtotime('+'. ($date_data['week'] - $date_first_day) .' weeks', strtotime($date_data['year'] .'-01-01'));
+  
+  // Now that we have a time stamp that falls somewhere in the week specified by the week number, we want a timestamp for the first day 
+  // of the week. We get the day number of the date in this timestamp (0 = Sunday), subtract that number of days from the timestamp if 
+  // the week starts with Sunday, or one less than the day number if the week starts with Monday
+  $start_week_ts = strtotime('-'. (date('w', $wk_ts) - $date_first_day) .' days', $wk_ts);
+  
+  // The end of the week is six days later 
+  $end_week_ts = strtotime('+6 days', $start_week_ts);
+  
+  $month_names = date_month_names(1);
+  $month_names_abbr = date_month_names_abbr(1);
+  $day_names = date_week_days(1);
+  $day_names_abbr = date_week_days_abbr(1);
+  
+  $date_data['monthno'] = date('m', $start_week_ts);
+  $month_index = (integer) $date_data['monthno'];
+  $date_data['month'] = $month_names[$month_index];
+  $date_data['mon'] = $month_names_abbr[$month_index];
+  
+  $date_data['day'] = date('d', $start_week_ts);
+  
+  $day_index = date('w', $start_week_ts);
+  $date_data['dayname'] = $day_names[$day_index];
+  $date_data['sdayname'] = $day_names_abbr[$day_index];
+  
+  $date_data['end_year'] = date('Y', $end_week_ts);
+  
+  $date_data['end_monthno'] = date('m', $end_week_ts);
+  $end_month_index = (integer) $date_data['end_monthno'];
+  $date_data['end_month'] = $month_names[$end_month_index];
+  $date_data['end_mon'] = $month_names_abbr[$end_month_index];
+  
+  $date_data['end_day'] = date('d', $end_week_ts);
+  $end_day_index = (integer) date('w', $end_week_ts);
+  $date_data['end_dayname'] = $day_names[$end_day_index];
+  $date_data['end_sdayname'] = $day_names_abbr[$end_day_index];
+}
+
+/**
+ * 
+ * @param $archive_type
+ * @return boolean
+ */
+function week_access_page($archive_type) {
+  if (is_string($archive_type)) {
+    $archive_types = variable_get('week_block_node_type', array());
+    return user_access('access content') and ($archive_types[$archive_type]);
+  }
+  elseif (is_null($archive_type)) {return user_access('access content');}
+}
+
+/**
+ * 
+ * hook_block() implementation
+ */
+function week_block($op = 'list', $delta = 0, $edit = array()) {
+  switch ($op) {
+    // listing of blocks, such as on the admin/system/block page
+    case 'list' :
+      $block['week_all']['info'] = t('Weekly archives');
+      $requested_types = variable_get('week_block_node_type', array());
+      foreach ($requested_types as $type) {
+        // each array record has a node type name as it's key and value if the node type has a block,
+        // or a value of 0 if it doesn't.
+        if ($type) {
+          $nodetypes = node_get_types('names');
+          // I have no idea why the inserted string is wrapped in <em> tags...delete the word 'strip_tags' calls if you don't believe me.
+          $block['week_'. $type]['info'] = strip_tags(t('Weekly %type archives', array(
+            
+            '%type' => $nodetypes[$type]
+          )));
+        }
+      }
+      return $block;
+    break;
+    case 'view' :
+      // our block content
+      $week_max_block_links = variable_get('week_block_link_max', 26);
+      if ($delta == 'week_all') {
+        $week_include_node_type = variable_get('week_include_node_type', array_keys(node_get_types('names')));
+        $week_include_node_type = array_flip($week_include_node_type);
+        unset($week_include_node_type[0]);
+        $block['subject'] = t('Weekly archives');
+      }
+      else {
+        $requested_type = substr($delta, strlen('week_'));
+        $block['subject'] = t('Weekly %type archives', array(
+          '%type' => node_get_types('name', $requested_type)
+        ));
+        $week_include_node_type = array(
+          $requested_type
+        );
+      }
+      if ($week_include_node_type) {
+        $week_rev_chronsort = variable_get('week_rev_chronsort', 0);
+        $query = week_links_query($week_include_node_type, $week_rev_chronsort);
+        // plus one is the easiest way to find out if you need a "more" link
+        $weeklist = db_query_range(db_rewrite_sql($query, 'n', 'nid'), $week_max_block_links + 1);
+        
+        $block_content = array();
+        $listed_links = 0;
+        while (($listed_links < $week_max_block_links) && $week = db_fetch_array($weeklist)) {
+          $listed_links += 1;
+          $week['type'] = $requested_type;
+          $week['type_name'] = node_get_types('name', $requested_type);
+          _week_week_data($week);
+          $block_content[] = theme('week_link', $week);
+        }
+        if (db_fetch_object($weeklist)) {
+          $week_path = variable_get('week_path', 'archive');
+          $path_order = variable_get('week_path_order', ARCHIVEROOTBEFORETYPE);
+          $node_path = variable_get('week_'. $week['type'] .'_path', $week['type']);
+          $path = $requested_type ? ($path_order == TYPEBEFOREARCHIVEROOT ? $node_path .'/'. $week_path : $week_path .'/'. $node_path) : $week_path;
+          $morelink = l(t('more...'), $path);
+        }
+        if (count($block_content)) {
+          $block['content'] = theme('item_list', $block_content) . $morelink;
+          return $block;
+        }
+      }
+    break;
+    default :
+  }
+}
+
+/**
+ * 
+ * (Really weak) hook_help() implementation
+ */
+function week_help($section) {
+  switch ($section) {
+    case 'admin/settings/week' :
+      $output = 'Create block containing a list of weekly archives, collectively or by node type.';
+    break;
+    case 'admin/build/modules#description' :
+      $output = 'Create block containing a list of weekly archives, collectively or by node type.';
+    break;
+    default :
+      $output = '';
+    break;
+  }
+  return $output;
+}
+
+/**
+ * The archive link query builder
+ *
+ * @param array $node_types
+ * @return string
+ */
+function week_links_query($node_types) {
+  foreach ($node_types as $key => $value) {
+    $node_types[$key] = "'". db_escape_string($value) ."'";
+  }
+  $week_rev_linksort = variable_get('week_rev_linksort', 1);
+  // WEEK(date, 3) gets precisely the ISO-8601 week number that PHP uses so I can calculate the first and last day of the week in the token module hooks
+  $date_first_day = variable_get('date_first_day', 1);
+  $week_option = $date_first_day == 1 ? '%v' : '%V';
+  $query = "SELECT CONCAT(DATE_FORMAT(FROM_UNIXTIME(created), '%Y'),DATE_FORMAT(FROM_UNIXTIME(created), '$week_option')) AS yearweek,
+    COUNT(CONCAT(DATE_FORMAT(FROM_UNIXTIME(created), '%Y'),DATE_FORMAT(FROM_UNIXTIME(created), '$week_option'))) AS postcount,
+    DATE_FORMAT(FROM_UNIXTIME(created), '%Y') AS year,
+    DATE_FORMAT(FROM_UNIXTIME(created), '$week_option') AS week,
+    MONTH(FROM_UNIXTIME(created)) AS month
+    FROM {node} n ";
+  $query .= 'WHERE n.type IN ('. implode(',', $node_types) .') ';
+  $query .= ' AND status = 1 ';
+  $query .= ' GROUP BY yearweek ORDER BY yearweek ';
+  $query .= $week_rev_linksort ? ' ASC' : ' DESC ';
+  return $query;
+}
+
+/**
+ * Generate a page listing links to all the archives that can be generated
+ *
+ * @return string
+ */
+function week_link_page($include_node_types) {
+  if (is_string($include_node_types)) {
+    $week_include_node_type[] = $include_node_types;
+  }
+  else {
+    $week_include_node_type = variable_get('week_include_node_type', array_keys(node_get_types('names')));
+  }
+  $query = week_links_query($week_include_node_type);
+  $weeklist = db_query(db_rewrite_sql($query, 'n', 'nid'));
+  $block_content = array();
+  $listed_links = 0;
+  while ($week = db_fetch_array($weeklist)) {
+    $listed_links += 1;
+    _week_week_data($week);
+    $block_content[] = theme('week_link', $week);
+  }
+  // TODO: needs a week_link_page_title variale series
+  if (is_string($include_node_types)) {
+    $link_data['type'] = $include_node_types;
+    $link_data['type_name'] = node_get_types('name', $include_node_types);
+    $page_title = 'Weekly [type_name] archive links';
+  }
+  else {
+    $page_title = 'Weekly archive links';
+  }
+  drupal_set_title(token_replace($page_title, 'week', (object) $link_data));
+  return theme('item_list', $block_content);
+}
+
+/**
+ * hook_menu() implementation
+ */
+function week_menu() {
+  $archive_types = array_flip(variable_get('week_block_node_type', array()));
+  $archive_types['all'] = NULL;
+  unset($archive_types[0]);
+  $archive_root = variable_get('week_path', 'archive');
+  $path_order = variable_get('week_path_order', ARCHIVEROOTBEFORETYPE);
+  foreach ($archive_types as $archive_type) {
+    $node_path = variable_get('week_'. $archive_type .'_path', $archive_type);
+    $archive_index = $archive_type ? ($path_order == TYPEBEFOREARCHIVEROOT ? $node_path .'/'. $archive_root : $archive_root .'/'. $node_path) : $archive_root;
+    $items[$archive_index] = array(
+      'title' => $archive_type ? "Weekly $archive_type archives links" : 'Weekly archives links', 
+      'page callback' => 'week_link_page', 
+      'page arguments' => array(
+        $archive_type
+      ), 
+      'type' => MENU_CALLBACK, 
+      'access callback' => 'week_access_page', 
+      'access arguments' => array(
+        $archive_type
+      )
+    );
+    $items[$archive_index .'/%/%'] = array(
+      'title' => $archive_type ? variable_get('week_'. $archive_type .'_title', $archive_type) : variable_get('week_title', 'Weekly archive [month] [yyyy]'), 
+      'page callback' => 'week_post_page', 
+      'page arguments' => $archive_type ? array(
+        2, 
+        3, 
+        $archive_type
+      ) : array(
+        1, 
+        2
+      ), 
+      'type' => MENU_CALLBACK, 
+      'access callback' => 'week_access_page', 
+      'access arguments' => array(
+        $archive_type
+      )
+    );
+  }
+  
+  $items['admin/settings/week'] = array(
+    
+    'title' => 'Weekly archive settings', 
+    'page callback' => 'drupal_get_form', 
+    'page arguments' => array(
+      
+      'week_settings_form'
+    ), 
+    'type' => MENU_NORMAL_ITEM, 
+    'access arguments' => array(
+      
+      'access administration pages'
+    )
+  );
+  $items['admin/settings/week/'] = array(
+    
+    'title' => 'Weekly archive settings', 
+    'description' => 'Configure node types for which blocks will be generated.', 
+    'type' => MENU_DEFAULT_LOCAL_TASK, 
+    'weight' => 5
+  );
+  $items['admin/settings/week/type_path'] = array(
+    
+    'title' => 'Links and titles', 
+    'description' => 'Configure path names for node types for which blocks will be generated and date format of the link text.', 
+    'page callback' => 'drupal_get_form', 
+    'page arguments' => array(
+      
+      'week_settings_type_path_form'
+    ), 
+    'type' => MENU_LOCAL_TASK, 
+    'access arguments' => array(
+      
+      'access administration pages'
+    ), 
+    'weight' => 10
+  );
+  return $items;
+}
+
+/**
+ * hook_perm() implementation
+ */
+function week_perm() {
+  return array(
+    
+    'administer week'
+  );
+}
+
+/**
+ * Generate the archive page
+ * @param $year
+ * @param $week
+ * @param $include_node_types
+ * @return unknown_type
+ */
+function week_post_page($year, $week, $include_node_types = NULL) {
+  if (is_numeric($year) and is_numeric($week)) {
+    $default_nodes_main = variable_get('default_nodes_main', 20);
+    $week_paginate = variable_get('week_paginate', 1);
+    $week_include_node_types = is_string($include_node_types) ? array(
+      
+      $include_node_types
+    ) : array_keys(variable_get('week_include_node_type', node_get_types('names')));
+    
+    $node_query_str = week_post_query($week_include_node_types, $year, $week);
+    
+    $node_query = $week_paginate ? pager_query($node_query_str, $default_nodes_main, 0) : db_query($node_query_str);
+    while ($nid = db_fetch_array($node_query)) {
+      $node = node_load($nid['nid']);
+      $page .= node_view($node, 1);
+    }
+    if ($week_paginate) {
+      $page .= theme('pager', NULL, $default_nodes_main, 0);
+    }
+    
+    $link_data['week'] = $week;
+    $link_data['year'] = $year;
+    _week_week_data($link_data);
+    if (is_string($include_node_types)) {
+      $link_data['type'] = $include_node_types;
+      $link_data['type_name'] = node_get_types('name', $include_node_types);
+      $page_title = variable_get('week_'. $include_node_types .'_title', '[type_name] [month] [d], [yyyy] thru [end_month] [end_d], [end_yyyy]');
+    }
+    else {
+      $page_title = variable_get('week_title', 'Week of [month] [d], [yyyy] thru [end_month] [end_d], [end_yyyy]');
+    }
+    drupal_set_title(token_replace($page_title, 'week', (object) $link_data));
+  }
+  return $page ? $page : '';
+}
+
+/**
+ * the archive page query builder
+ * @param $week_include_node_types
+ * @param $year
+ * @param $week
+ * @return unknown_type
+ */
+function week_post_query($week_include_node_types, $year, $week) {
+  if (is_string($week_include_node_types)) {
+    $week_include_node_types[] = $week_include_node_types;
+  }
+  foreach ($week_include_node_types as $key => $value) {
+    $node_types[$key] = "'". db_escape_string($value) ."'";
+  }
+  $week_rev_pagesort = variable_get('week_rev_pagesort', 1);
+  $date_first_day = variable_get('date_first_day', 1);
+  $week_option = $date_first_day == '0' ? '0' : '1';
+  $query = "SELECT n.nid FROM {node} n
+    WHERE YEAR(FROM_UNIXTIME(n.created)) = '{$year}'
+    AND WEEK(FROM_UNIXTIME(n.created), $week_option) = '{$week}'";
+  $query .= ' AND n.type IN ('. implode(',', $node_types) .') ';
+  $query .= ' AND status = 1 ';
+  $query .= ' ORDER BY n.created';
+  $query .= $week_rev_pagesort ? '' : ' DESC ';
+  return $query;
+}
+
+/**
+ * Creates the form to enable node type blocks 
+ * @return array
+ */
+function week_settings_form() {
+  $output['week_all'] = array(
+    
+    '#tree' => FALSE, 
+    '#type' => 'fieldset', 
+    '#collapsible' => TRUE, 
+    '#collapsed' => TRUE, 
+    '#title' => t('Global block node types'), 
+    'week_include_node_type' => array(
+      
+      '#type' => 'checkboxes', 
+      '#multiple' => TRUE, 
+      '#default_value' => variable_get('week_include_node_type', array_keys(node_get_types('names'))), 
+      '#options' => node_get_types('names'), 
+      '#description' => t('Selected node types will be included in the global block and archive pages.')
+    )
+  );
+  $output['week_block'] = array(
+    
+    '#tree' => FALSE, 
+    '#type' => 'fieldset', 
+    '#collapsible' => TRUE, 
+    '#collapsed' => TRUE, 
+    '#title' => t('Blocks by node type'), 
+    'week_block_node_type' => array(
+      
+      '#type' => 'checkboxes', 
+      '#multiple' => TRUE, 
+      '#default_value' => variable_get('week_block_node_type', array()), 
+      '#options' => node_get_types('names'), 
+      '#description' => t('Blocks and archive pages for the selected node types will be created.')
+    )
+  );
+  
+  $output['week_block_link_max'] = array(
+    
+    '#type' => 'textfield', 
+    '#title' => t('Maximum week links in block'), 
+    '#default_value' => variable_get('week_block_link_max', 26), 
+    '#size' => 5, 
+    '#maxlength' => 5, 
+    '#description' => t('Enter a number to limit the number of months linked in the block, blank or "0" to list all months.')
+  );
+  
+  $output['week_rev_linksort'] = array(
+    
+    '#type' => 'checkbox', 
+    '#title' => t('Sort links in chronological order'), 
+    '#return_value' => 1, 
+    '#default_value' => variable_get('week_rev_linksort', 0), 
+    '#description' => t('If checked, the list of archive links will be sorted from oldest to newest. Otherwise it will be sorted from newest to oldest')
+  );
+  
+  $output['week_show_linkcount'] = array(
+    
+    '#type' => 'checkbox', 
+    '#title' => t('Show link count'), 
+    '#return_value' => 1, 
+    '#default_value' => variable_get('week_show_linkcount', 1), 
+    '#description' => t('If checked, the link to each weekly archive page in blocks will show the number of nodes in that week ')
+  );
+  
+  $output['week_rev_pagesort'] = array(
+    
+    '#type' => 'checkbox', 
+    '#title' => t('Sort archive page in chronological order'), 
+    '#return_value' => 1, 
+    '#default_value' => variable_get('week_rev_pagesort', 0), 
+    '#description' => t('If checked, the list of archive links will be sorted from oldest to newest. Otherwise it will be sorted from newest to oldest')
+  );
+  
+  $output['week_paginate'] = array(
+    
+    '#type' => 'checkbox', 
+    '#title' => t('Paginate archive page'), 
+    '#return_value' => 1, 
+    '#default_value' => variable_get('week_paginate', 0), 
+    '#description' => t('If checked the output will be split into pages. The number of posts will respect the global nodes per page setting.')
+  );
+  $form = system_settings_form($output);
+  $form['#submit'] = array(
+    
+    'week_settings_form_submit'
+  );
+  $output['#validate'][] = 'week_settings_form_validate';
+  return $form;
+}
+
+/**
+ * week_settings_form reset function
+ *
+ */
+function week_settings_form_reset() {
+  variable_del('week_include_node_type');
+  variable_del('week_block_node_type');
+  
+  variable_del('week_block_link_max');
+  variable_del('week_rev_linksort');
+  variable_del('week_show_linkcount');
+  variable_del('week_rev_pagesort');
+  variable_del('week_paginate');
+  week_settings_type_path_form_reset();
+}
+
+/**
+ * week_settings_form submit function
+ *
+ * @param array $form
+ * @param array $form_state
+ */
+function week_settings_form_submit($form, &$form_state) {
+  $edit = $form_state['values'];
+  if ($form_state['clicked_button']['#value'] == 'Reset to defaults') {
+    week_settings_form_reset();
+  }
+  else {
+    variable_set('week_include_node_type', $edit['week_include_node_type']);
+    variable_set('week_block_node_type', $edit['week_block_node_type']);
+    
+    variable_set('week_block_link_max', $edit['week_block_link_max']);
+    variable_set('week_rev_linksort', $edit['week_rev_linksort']);
+    variable_set('week_show_linkcount', $edit['week_show_linkcount']);
+    variable_set('week_rev_pagesort', $edit['week_rev_pagesort']);
+    variable_set('week_paginate', $edit['week_paginate']);
+  }
+  menu_rebuild();
+}
+
+/**
+ * week_settings_form validation function
+ *
+ * @param array $form
+ * @param array $form_state
+ */
+function week_settings_form_validate($form, &$form_state) {
+  if (!is_numeric($form_state['values']['week_block_link_max'])) {
+    form_set_error('week_block_link_max', 'Maximum number of links must be numeric.');
+  }
+}
+
+function week_settings_type_path_form() {
+  $tokens = week_token_list('week');
+  foreach ($tokens['week'] as $key => $value) {
+    $token_help[] = "<strong>$key</strong>: $value";
+  }
+  $archive_path = variable_get('week_path', 'archive');
+  $output['global'] = array(
+    
+    '#tree' => FALSE, 
+    '#type' => 'fieldset', 
+    '#collapsible' => TRUE, 
+    '#collapsed' => TRUE, 
+    '#title' => t('Global settings'), 
+    'week_link_text' => array(
+      
+      '#type' => 'textfield', 
+      '#title' => t('Link text'), 
+      '#default_value' => variable_get('week_link_text', '[month] [d], [yyyy] thru [end_month] [end_d], [end_yyyy]'), 
+      '#description' => t('Define how the block link text is constructed.')
+    ), 
+    'week_path' => array(
+      
+      '#type' => 'textfield', 
+      '#title' => t('Archive path'), 
+      '#default_value' => variable_get('week_path', 'archive'), 
+      '#description' => t('Enter the path to use as the default archive path. Please use only letters, numbers and underscores (_).<br />The global archive path
+      will be "archive_path/year/week".')
+    ), 
+    'week_title' => array(
+      
+      '#type' => 'textfield', 
+      '#title' => t('Archive title'), 
+      '#default_value' => variable_get('week_title', 'Week of [month] [d], [yyyy] thru [end_month] [end_d], [end_yyyy]'), 
+      '#description' => t('Enter the base title to use for the archive pages.')
+    ), 
+    'help' => array(
+      
+      '#tree' => FALSE, 
+      '#type' => 'fieldset', 
+      '#collapsible' => TRUE, 
+      '#collapsed' => TRUE, 
+      '#title' => t('Replacement patterns'), 
+      'output' => array(
+        
+        '#type' => 'markup', 
+        '#value' => theme('item_list', $token_help), 
+        '#prefix' => '<div>', 
+        '#sufffix' => '</div>'
+      )
+    )
+  );
+  $output['by_node_type'] = array(
+    
+    '#tree' => FALSE, 
+    '#type' => 'fieldset', 
+    '#collapsible' => TRUE, 
+    '#collapsed' => TRUE, 
+    '#title' => t('Node type settings')
+  );
+  
+  $output['by_node_type']['week_path_order'] = array(
+    
+    '#type' => 'radios', 
+    '#title' => t('Node type archive path'), 
+    '#options' => array(
+      
+      ARCHIVEROOTBEFORETYPE => $archive_path .'/node_type', 
+      TYPEBEFOREARCHIVEROOT => 'node_type/'. $archive_path
+    ), 
+    '#default_value' => variable_get('week_path_order', ARCHIVEROOTBEFORETYPE), 
+    '#description' => 'Select the order in which the parts of node specific archive appear in the path to the archive page. <br />The node type archive paths will be
+    archive_path/node_type/year/week or node_type/archive_path/year/week.'
+  );
+  $output['by_node_type']['node_type'] = array(
+    
+    '#tree' => TRUE, 
+    '#type' => 'fieldset', 
+    '#title' => t('Titles and paths')
+  );
+  
+  $node_types = variable_get('week_block_node_type', array());
+  if (count($node_types)) {
+    foreach ($node_types as $key => $node_type) {
+      if ($node_type) {
+        $output['by_node_type']['node_type'][$node_type] = array(
+          
+          'title' => array(
+            
+            '#type' => 'textfield', 
+            '#title' => node_get_types('name', $node_type) . t(' archive title'), 
+            '#default_value' => variable_get('week_'. $node_type .'_title', '[type_name] [month] [d], [yyyy]')
+          ), 
+          'path' => array(
+            
+            '#type' => 'textfield', 
+            '#title' => node_get_types('name', $node_type) . t(' archive path'), 
+            '#default_value' => variable_get('week_'. $node_type .'_path', $node_type)
+          )
+        );
+      }
+    }
+    $output['by_node_type']['node_type']['help'] = array(
+      
+      '#tree' => FALSE, 
+      '#type' => 'fieldset', 
+      '#collapsible' => TRUE, 
+      '#collapsed' => TRUE, 
+      '#title' => t('Replacement patterns'), 
+      'output' => array(
+        
+        '#type' => 'markup', 
+        '#value' => theme('item_list', $token_help), 
+        '#prefix' => '<div>', 
+        '#sufffix' => '</div>'
+      )
+    );
+  }
+  $output = system_settings_form($output);
+  $output['#submit'] = array(
+    
+    'week_settings_type_path_submit'
+  );
+  $output['#validate'][] = 'week_settings_type_path_validate';
+  return $output;
+}
+
+/**
+ * week_settings_type_path_form reset function
+ */
+function week_settings_type_path_form_reset() {
+  variable_del('week_link_text');
+  variable_del('week_path');
+  variable_del('week_title');
+  variable_del('week_path_order');
+  $node_types = node_get_types('names');
+  foreach ($node_types as $key => $node_type) {
+    if ($node_type) {
+      variable_del('week_'. $key .'_path');
+      variable_del('week_'. $key .'_title');
+    }
+  }
+  cache_clear_all();
+}
+
+/**
+ * week_settings_type_path_form submit function
+ * @param $form
+ * @param $form_state
+ */
+function week_settings_type_path_submit($form, &$form_state) {
+  if ($form_state['clicked_button']['#value'] == 'Reset to defaults') {
+    week_settings_type_path_form_reset();
+  }
+  else {
+    $edit = $form_state['values'];
+    variable_set('week_link_text', $edit['week_link_text']);
+    variable_set('week_path', $edit['week_path']);
+    variable_set('week_title', $edit['week_title']);
+    variable_set('week_path_order', $edit['week_path_order']);
+    
+    $edit = $form_state['values']['node_type'];
+    foreach ($edit as $key => $value) {
+      variable_set('week_'. $key .'_path', $value['path']);
+      variable_set('week_'. $key .'_title', $value['title']);
+    }
+  }
+  menu_rebuild();
+}
+
+/**
+ * week_settings_type_path_form validate function
+ * @param $form
+ * @param $form_state
+ */
+function week_settings_type_path_validate($form, &$form_state) {
+  $found = preg_match('%^[a-z|0-9|_]+$%', $form_state['values']['week_path']);
+  if (!$found) {
+    form_set_error('global', 'Archive path must be all lowercase, and begin with an alphabetic character or underscore. The remainder must be all alphanumerics.', TRUE);
+  }
+  
+  $edit = $form_state['values']['node_type'];
+  foreach ($edit as $value) {
+    $found = preg_match('%^[a-z|0-9|_]+$%', $value['path']);
+    if (!$found) {
+      form_set_error('path_name', 'Archive path must be all lowercase, and begin with an alphabetic character or underscore. The remainder must be all alphanumerics.', TRUE);
+    }
+  }
+}
+
+/**
+ * hook_theme() implementation
+ *
+ * @return array
+ */
+function week_theme($existing, $type, $theme, $path) {
+  return array(
+    
+    'week_link' => array(
+      
+      'arguments' => array(
+        
+        'link_data' => NULL
+      )
+    )
+  );
+}
+
+/**
+ * hook_token_list() implementation
+ *
+ * @param string $type
+ * @return array
+ */
+function week_token_list($type = 'all') {
+  if ($type == 'week') {
+    $tokens['week']['type'] = t('Machine readable type name');
+    $tokens['week']['type_name'] = t('Displayable type label');
+    
+    $tokens['week']['month'] = t('Long month name (January, February...December) of the first day of the week');
+    $tokens['week']['mon'] = t('Short month name (Jan, Feb...Dec) of the first day of the week');
+    $tokens['week']['mm'] = t('Two digit month (01, 02...12) of the first day of the week');
+    $tokens['week']['m'] = t('Variable digit month (1, 2...12) of the first day of the week');
+    $tokens['week']['week'] = t('ISO-8601 week number. Week 1 is the first week with more than three days in it.');
+    $tokens['week']['dd'] = t('Two digit day (01, 02...31) of the first day of the week');
+    $tokens['week']['d'] = t('Variable digit day (1, 2...31) of the first day of the week');
+    $tokens['week']['day'] = t('Day name (Sunday, Monday...Saturday) of the first day of the week');
+    $tokens['week']['sday'] = t('Abbrieviated day name (Sun, Mon...Sat) of the first day of the week');
+    $tokens['week']['yyyy'] = t('Four digit year of the first day of the week');
+    $tokens['week']['yy'] = t('Two digit year of the first day of the week');
+    
+    $tokens['week']['end_month'] = t('Long month name (January, February...December) of the last day of the week');
+    $tokens['week']['end_mon'] = t('Short month name (Jan, Feb...Dec) of the last day of the week');
+    $tokens['week']['end_mm'] = t('Two digit month (01, 02...12) of the last day of the week');
+    $tokens['week']['end_m'] = t('Variable digit month (1, 2...12) of the last day of the week');
+    $tokens['week']['end_dd'] = t('Two digit day (01, 02...31) of the last day of the week');
+    $tokens['week']['end_d'] = t('Variable digit day (1, 2...31) of the last day of the week');
+    $tokens['week']['end_day'] = t('Day name (Sunday, Monday...Saturday) of the last day of the week');
+    $tokens['week']['end_sday'] = t('Abbrieviated day name (Sun, Mon...Sat) of the last day of the week');
+    $tokens['week']['end_yyyy'] = t('Four digit year of the last day of the week');
+    $tokens['week']['end_yy'] = t('Two digit year of the last day of the week');
+    return $tokens;
+  }
+  else {
+    return array();
+  }
+}
+
+/**
+ * hook_token_values() implementation
+ *
+ * @param string $type
+ * @param object $object
+ * @return unknown
+ */
+function week_token_values($type, $object = NULL) {
+  if ($type == 'week') {
+    $link_data = $object;
+    
+    $token['type'] = $link_data->type;
+    $token['type_name'] = $link_data->type_name;
+    
+    $token['month'] = $link_data->month;
+    $token['mon'] = $link_data->mon;
+    $token['mm'] = $link_data->monthno;
+    $token['week'] = (integer) $link_data->week;
+    $token['m'] = (integer) $link_data->monthno;
+    $token['dd'] = $link_data->day;
+    $token['d'] = (integer) $link_data->day;
+    $token['day'] = $link_data->dayname;
+    $token['sday'] = $link_data->sdayname;
+    $token['yyyy'] = $link_data->year;
+    $token['yy'] = substr($link_data->year, -2);
+    
+    $token['end_month'] = $link_data->end_month;
+    $token['end_mon'] = $link_data->end_mon;
+    $token['end_mm'] = $link_data->end_monthno;
+    $token['end_m'] = (integer) $link_data->end_monthno;
+    $token['end_dd'] = $link_data->end_day;
+    $token['end_d'] = (integer) $link_data->end_day;
+    $token['end_day'] = $link_data->end_dayname;
+    $token['end_sday'] = $link_data->end_sdayname;
+    $token['end_yyyy'] = $link_data->end_year;
+    $token['end_yy'] = substr($link_data->end_year, -2);
+    return $token;
+  }
+  else {
+    return array();
+  }
+}
+
+/**
+ * Format post count for block
+ *
+ * @param array $link_data
+ * @return string
+ */
+function _week_linkcount($link_data) {
+  return variable_get('week_show_linkcount', 1) ? " ({$link_data['postcount']})" : '';
+}
+
+/**
+ * Format link text for block
+ *
+ * @param array $link_data
+ * @return string
+ */
+function _week_linktext($link_data) {
+  return token_replace(variable_get('week_link_text', '[month] [d], [yyyy]'), 'week', (object) $link_data);
+}
+
+/**
+ * Format url to archive for block
+ *
+ * @param array $link_data
+ * @return string
+ */
+function _week_linkpath($link_data, $week_path) {
+  $path_order = variable_get('week_path_order', ARCHIVEROOTBEFORETYPE);
+  $node_path = variable_get('week_'. $link_data['type'] .'_path', $link_data['type']);
+  $path = $link_data['type'] ? ($path_order == TYPEBEFOREARCHIVEROOT ? $node_path .'/'. $week_path : $week_path .'/'. $node_path) : $week_path;
+  return $path ."/{$link_data['year']}/{$link_data['week']}";
+}
+
+/**
+ * Theme function for links to archives
+ *
+ * @param array $link_data
+ * The indexes are:
+ * 		year - four digit year
+ * 		monthno - 01..12
+ * 		mon - short month name
+ * 		month - long month name
+ * 		postcount - number of post
+ *
+ * @return string
+ */
+function theme_week_link($link_data) {
+  $week_path = variable_get('week_path', 'archive');
+  $link_count = _week_linkcount($link_data);
+  $link_path = _week_linkpath($link_data, $week_path);
+  return l(_week_linktext($link_data) . $link_count, $link_path);
+}

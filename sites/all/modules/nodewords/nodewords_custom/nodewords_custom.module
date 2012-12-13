@@ -1,0 +1,49 @@
+<?php
+// $Id: nodewords_custom.module,v 1.1.2.1 2009/10/04 20:27:19 kiam Exp $
+
+/**
+ * @file
+ * Allows users to add custom meta tags to Drupal pages.
+ */
+
+/**
+ * @addtogroup nodewords_custom
+ * @{
+ */
+
+/*****************************************************************************
+ * Drupal hooks.
+ ****************************************************************************/
+
+/**
+ * Implementation of hook_nodewords_api().
+ */
+function nodewords_custom_nodewords_api() {
+  return array(
+    'version' => 1.1,
+  );
+}
+
+/**
+ * Implementation of hook_nodewords_tags_info().
+ */
+function nodewords_custom_nodewords_tags_info() {
+  $tags = array();
+
+  return $tags;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function nodewords_custom_perm() {
+  return array();
+}
+
+/*****************************************************************************
+ * Meta tags implementation functions.
+ ****************************************************************************/
+
+/**
+ * @} End of "addtogroup nodewords_custom".
+ */

@@ -1,0 +1,13 @@
+/* $Id: backref_views.css,v 1.1.2.1 2009/07/05 09:01:56 markuspetrux Exp $ */
+
+/**
+ * Style elements related to back reference views.
+ *
+ * @see theme_noderelationships_backref_view()
+ */
+dl.noderelationships-backref-view {
+  margin-bottom: 1.5em;
+}
+dl.noderelationships-backref-view dt {
+  font-weight: bold;
+}

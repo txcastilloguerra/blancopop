@@ -1,0 +1,26 @@
+<?php
+function week_install() {
+	return;
+}
+
+function week_uninstall() {
+  variable_del('week_include_node_type');
+  variable_del('week_block_node_type');
+
+  variable_del('week_block_link_max');
+  variable_del('week_rev_linksort');
+  variable_del('week_show_linkcount');
+  variable_del('week_rev_pagesort');
+  variable_del('week_paginate');
+  variable_del('week_link_text');
+  variable_del('week_path');
+  variable_del('week_title');
+  variable_del('week_path_order');
+  $node_types = node_get_types('names');
+  foreach ($node_types as $key => $node_type) {
+    if ($node_type) {
+      variable_del('week_'. $key .'_path');
+      variable_del('week_'. $key .'_title');
+    }
+  }
+}

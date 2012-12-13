@@ -1,0 +1,44 @@
+// $Id: CHANGELOG.txt,v 1.1.2.16 2009/08/21 23:22:04 markuspetrux Exp $
+
+CCK 6.x-1.1
+===========
+
+Features:
+- #556024 Add support for Automatic Node Titles.
+
+Bugfixes:
+- #536514 Search and reference multiple items error after submit.
+- #548602 Buttons enabled for node reference extras disappear when validation errors occur in the form.
+- #551100 nodereference buttons disappear on add another item (caused by #548602).
+
+
+CCK 6.x-1.0
+===========
+
+Bugfixes:
+- Remove default value for settings column in schema definition. This change does not affect the table already created.
+- Fix CSS in back references settings to hide the link to fields when a field is moved off the fields region.
+
+
+CCK 6.x-1.0-beta3
+=================
+
+Features:
+- Added a new formatter for back references fields to display the count of back references.
+
+
+CCK 6.x-1.0-beta2
+=================
+
+Bugfixes:
+- #511968: Can't remove "title" label.
+- Enable search/create and reference features when creating nodes.
+- Use separate columns for hidden nid/title fields used for search and reference views.
+- Include .inc file from backref field formatted, required to support content_view_field().
+- Implement hook_field('load') so that we can support content_view_field() used for Panels integration in CCK.
+
+
+CCK 6.x-1.0-beta1
+=================
+
+- First official release of the Node Relationships module.

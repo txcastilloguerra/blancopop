@@ -1,0 +1,71 @@
+<?php
+// $Id: versioncontrol_git.install,v 1.17 2009/04/11 14:38:45 corni Exp $
+/**
+ * @file
+ * Git backend for Version Control API - Provides Git commit information and
+ * account management as a pluggable backend.
+ *
+ * Copyright 2008 by Jimmy Berry ("boombatower", http://drupal.org/user/214218)
+ * Copyright 2009 by Cornelius Riemenschneider ("CorniI", http://drupal.org/user/136353)
+ */
+
+/**
+ * Implementation of hook_schema().
+ */
+function versioncontrol_git_schema() {
+  $schema['versioncontrol_git_repositories'] = array(
+    'description' => t('Git repositories.'),
+    'fields' => array(
+      'repo_id' => array(
+        'description' => t('Repository identifier.'),
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        ),
+      'update_method' => array(
+        'description' => t('Update method.'),
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        ),
+      'updated' => array(
+        'description' => t('Last update.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        ),
+      'locked' => array(
+        'description' => t('True when there is an update in progress.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+        'default' => 0,
+        ),
+      'cache_path' => array(
+        'description' => t('Path of the cache file.'),
+        'type' => 'blob',
+        'not null' => FALSE,
+        'default' => '',
+        ),
+      ),
+    'primary key' => array('repo_id'),
+  );
+  return $schema;
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function versioncontrol_git_install() {
+  drupal_install_schema('versioncontrol_git');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function versioncontrol_git_uninstall() {
+  drupal_uninstall_schema('versioncontrol_git');
+}

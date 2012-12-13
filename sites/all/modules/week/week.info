@@ -1,0 +1,12 @@
+;$Id: week.info,v 1.2.2.1.2.2 2009/08/31 17:16:19 prometheus6 Exp $
+name = Week
+description = Create block containing a list of weekly archives.
+core = 6.x
+dependencies[] = token
+dependencies[] = date_api
+; Information added by drupal.org packaging script on 2009-09-01
+version = "6.x-2.4"
+core = "6.x"
+project = "week"
+datestamp = "1251832889"
+

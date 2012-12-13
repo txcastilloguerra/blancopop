@@ -1,0 +1,37 @@
+/* $Id$ */
+
+#page, .no-sidebars #content {
+	width: 990px;
+}
+
+#sidebar-left {
+	width: 200px;
+	margin-right: -200px;
+}
+
+#sidebar-right {
+	width: 300px;
+	margin-left: 690px;
+	margin-right: -990px;
+}
+
+#content {
+	margin-right: -990px;
+}
+
+.sidebar-left #content {
+	width: 790px;
+	margin-left: 200px;
+	margin-right: -990px;
+}
+
+.sidebar-right #content {
+	width: 676px;
+	margin-right: -676px;
+}
+
+.two-sidebars #content {
+	width: 590px;
+	margin-left: 200px;
+	margin-right: -790px;
+}

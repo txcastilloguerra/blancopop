@@ -1,0 +1,12 @@
+; $Id: views_cloud.info,v 1.1 2008/08/26 15:20:30 eaton Exp $
+name = Views cloud
+description = Allows views and summaries to be displayed as clouds of weighted items.
+package = Views bonus pack
+core = 6.x
+
+; Information added by drupal.org packaging script on 2008-09-17
+version = "6.x-1.0"
+core = "6.x"
+project = "views_cloud"
+datestamp = "1221667828"
+
